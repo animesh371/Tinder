@@ -1,4 +1,3 @@
-# encoding: utf8                                                                                                                                           1,1           Top# encoding: utf8
 import argparse
 from datetime import datetime
 import json
@@ -14,8 +13,8 @@ headers = {
 }
 
 
-fb_id = '{ your fb user id here }'
-fb_auth_token = '{ your fb auth token here }'
+fb_id = ''
+fb_auth_token = ''
 
 
 class User(object):
@@ -70,13 +69,18 @@ class User(object):
 def auth_token(fb_auth_token, fb_user_id):
     h = headers
     h.update({'content-type': 'application/json'})
-    req = requests.post(
-        'https://api.gotinder.com/auth',
-        headers=h,
-        data=json.dumps({'facebook_token': fb_auth_token, 'facebook_id': fb_user_id})
-    )
+    session = requests.Session()
+    data = {'facebook_token': fb_auth_token, 
+    	    'facebook_id' : fb_user_id}
+    print("Authnticating facebook via tinder \n")
+    print (fb_auth_token)
+    print (fb_user_id)
+    result = session.post('https://api.gotinder.com/auth', json=data, proxies=None).json()
+    #print (result)
+    if 'token' not in result:
+       print ('Error in authenticating \n')
     try:
-        return req.json()['token']
+        return result['token']
     except:
         return None
 
@@ -87,10 +91,10 @@ def recommendations(auth_token):
     r = requests.get('https://api.gotinder.com/user/recs', headers=h)
     if r.status_code == 401 or r.status_code == 504:
         raise Exception('Invalid code')
-        print r.content
+        print (r.content)
 
     if not 'results' in r.json():
-        print r.json()
+        print (r.json())
 
     for result in r.json()['results']:
         yield User(result)
@@ -125,8 +129,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    print 'Tinder bot'
-    print '----------'
+    print ('Tinder bot')
+    print ('----------')
     matches = 0
     liked = 0
     nopes = 0
@@ -135,32 +139,33 @@ if __name__ == '__main__':
         token = auth_token(fb_auth_token, fb_id)
 
         if not token:
-            print 'could not get token'
+            print ('could not get token')
             sys.exit(0)
 
         for user in recommendations(token):
             if not user:
                 break
 
-            print unicode(user)
+            print (str(user))
+            print (user.d)
 
             try:
                 action = like_or_nope()
                 if action == 'like':
-                    print ' -> Like'
+                    print (' -> Like')
                     match = like(user.user_id)
                     if match:
-                        print ' -> Match!'
+                        print (' -> Match!')
 
                     with open('./liked.txt', 'a') as f:
                         f.write(user.user_id + u'\n')
 
                 else:
-                    print ' -> random nope :('
+                    print (' -> random nope :(')
                     nope(user.user_id)
 
             except:
-                print 'networking error %s' % user.user_id
+                print ('networking error %s' % user.user_id)
 
             s = float(randint(250, 2500) / 1000)
             sleep(s)
